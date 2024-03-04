@@ -29,12 +29,20 @@ class Canvas : public Component
         kRect = 2,
         kEllipse = 3,
         kPolygon = 4,
+        kFreehand = 5,
     };
 
     // Shape type setters.
     void set_default();
     void set_line();
     void set_rect();
+    
+    void set_ellipse();
+    void set_polygon();
+    void set_freehand();
+
+    // Set the line color
+    void set_color(const ImVec4& color);
 
     // Clears all shapes from the canvas.
     void clear_shape_list();
@@ -44,6 +52,9 @@ class Canvas : public Component
 
     // Controls the visibility of the canvas background.
     void show_background(bool flag);
+
+    unsigned char current_line_color[4] = {255, 0, 0, 255};
+    float current_line_thickness = 2.0f;
 
    private:
     // Drawing functions.
@@ -63,10 +74,13 @@ class Canvas : public Component
     ImVec2 canvas_max_;         // Bottom-right corner of the canvas.
     ImVec2 canvas_size_;        // Size of the canvas.
     bool draw_status_ = false;  // Is the canvas currently being drawn on.
+    
+    bool is_drawing_polygon = false;
 
     ImVec2 canvas_minimal_size_ = ImVec2(50.f, 50.f);
     ImU32 background_color_ = IM_COL32(50, 50, 50, 255);
     ImU32 border_color_ = IM_COL32(255, 255, 255, 255);
+
     bool show_background_ = true;  // Controls background visibility.
 
     // Mouse interaction status.

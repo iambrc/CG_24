@@ -1,5 +1,4 @@
 add_subdirectory(1_BasicDArray)
-add_subdirectory(1_BasicDArray_withSmartPointer)
 add_subdirectory(2_EfficientDArray)
 add_subdirectory(3_TemplateDArray)
 add_subdirectory(4_list_Polynomial)

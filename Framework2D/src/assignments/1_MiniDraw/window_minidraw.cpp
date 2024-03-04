@@ -41,14 +41,72 @@ void MiniDraw::draw_canvas()
             std::cout << "Set shape to Rect" << std::endl;
             p_canvas_->set_rect();
         }
-
-        // HW1_TODO: More primitives
-        //    - Ellipse
-        //    - Polygon
-        //    - Freehand(optional)
+        ImGui::SameLine();
+        if (ImGui::Button("Ellipse"))
+        {
+            std::cout << "Set shape to Ellipse" << std::endl;
+            p_canvas_->set_ellipse();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Polygon"))
+        {
+            std::cout << "Set shape to Polygon" << std::endl;
+            p_canvas_->set_polygon();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("FreeHand"))
+        {
+            std::cout << "Set shape to Freehand" << std::endl;
+            p_canvas_->set_freehand();
+        }
+        ImGui::SameLine();
         
         // Canvas component
         ImGui::Text("Press left mouse to add shapes.");
+
+        // set the line color
+        if (ImGui::ColorButton("0", {0,0,0,1}))
+        {
+            p_canvas_->set_color({0,0,0,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("1", {1,0,0,1}))
+        {
+            p_canvas_->set_color({1,0,0,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("2", {0,1,0,1}))
+        {
+            p_canvas_->set_color({0,1,0,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("3", {0,0,1,1}))
+        {
+            p_canvas_->set_color({0,0,1,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("4", {1,1,0,1}))
+        {
+            p_canvas_->set_color({1,1,0,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("5", {1,0,1,1}))
+        {
+            p_canvas_->set_color({1,0,1,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("6", {0,1,1,1}))
+        {
+            p_canvas_->set_color({0,1,1,1});
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorButton("7", {1,1,1,1}))
+        {
+            p_canvas_->set_color({1,1,1,1});
+        }
+        ImGui::SameLine();
+        // here change the line thickness
+        ImGui::SliderFloat("LineThickness",&p_canvas_->current_line_thickness,1.0,10.0);
         // Set the canvas to fill the rest of the window
         const auto& canvas_min = ImGui::GetCursorScreenPos();
         const auto& canvas_size = ImGui::GetContentRegionAvail();

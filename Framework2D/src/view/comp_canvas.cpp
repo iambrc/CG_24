@@ -6,6 +6,9 @@
 #include "imgui.h"
 #include "view/shapes/line.h"
 #include "view/shapes/rect.h"
+#include "view/shapes/ellipse.h"
+#include "view/shapes/polygon.h"
+#include "view/shapes/freehand.h"
 
 namespace USTC_CG
 {
@@ -16,7 +19,7 @@ void Canvas::draw()
     if (is_hovered_ && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         mouse_click_event();
     mouse_move_event();
-    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
         mouse_release_event();
 
     draw_shapes();
@@ -54,6 +57,33 @@ void Canvas::set_rect()
     shape_type_ = kRect;
 }
 
+void Canvas::set_ellipse()
+{
+    draw_status_ = false;
+    shape_type_ = kEllipse;
+}
+
+void Canvas::set_polygon()
+{
+    draw_status_ = false;
+    shape_type_ = kPolygon;
+}
+
+void Canvas::set_freehand()
+{
+    draw_status_ = false;
+    shape_type_ = kFreehand;
+}
+
+// Set the color of the line
+void Canvas::set_color(const ImVec4& color)
+{
+    current_line_color[0] = unsigned char(color.x * 255);
+    current_line_color[1] = unsigned char(color.y * 255);
+    current_line_color[2] = unsigned char(color.z * 255);
+    current_line_color[3] = unsigned char(color.w * 255);
+}
+
 void Canvas::clear_shape_list()
 {
     shape_list_.clear();
@@ -80,18 +110,24 @@ void Canvas::draw_background()
 
 void Canvas::draw_shapes()
 {
-    Shape::Config s = { .bias = { canvas_min_.x, canvas_min_.y } };
+    // Shape::Config s = { .bias = { canvas_min_.x, canvas_min_.y } };
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
     // ClipRect can hide the drawing content outside of the rectangular area
     draw_list->PushClipRect(canvas_min_, canvas_max_, true);
     for (const auto& shape : shape_list_)
     {
-        shape->draw(s);
+        shape->config.bias[0] = canvas_min_.x;
+        shape->config.bias[1] = canvas_min_.y;
+        shape->draw();
     }
     if (draw_status_ && current_shape_)
     {
-        current_shape_->draw(s);
+        current_shape_->config.setcolor(current_line_color);  // here we change the color of line
+        current_shape_->config.bias[0] = canvas_min_.x;
+        current_shape_->config.bias[1] = canvas_min_.y;
+        current_shape_->config.line_thickness = current_line_thickness;
+        current_shape_->draw();
     }
     draw_list->PopClipRect();
 }
@@ -121,24 +157,48 @@ void Canvas::mouse_click_event()
                     start_point_.x, start_point_.y, end_point_.x, end_point_.y);
                 break;
             }
-             
+            // Add Ellipse here
+            case USTC_CG::Canvas::kEllipse:
+            {
+                current_shape_ = std::make_shared<Ellipse>(
+                    start_point_.x, start_point_.y, end_point_.x, end_point_.y);
+                break;
+            }
+            // Add Polygon here
+            case USTC_CG::Canvas::kPolygon:
+            {
+                current_shape_ = std::make_shared<Polygon>(start_point_.x, start_point_.y);
+                is_drawing_polygon = true;
+                break;
+            }
+            case USTC_CG::Canvas::kFreehand:
+            {
+                current_shape_ = std::make_shared<Freehand>(start_point_.x, start_point_.y);
+                break;
+            }
             default: break;
         }
     }
     else
     {
-        draw_status_ = false;
-        if (current_shape_)
+        if (is_drawing_polygon)
         {
-            shape_list_.push_back(current_shape_);
-            current_shape_.reset();
+            current_shape_->addpoint();
+        }
+        else
+        {
+            draw_status_ = false;
+            if (current_shape_)
+            {
+                shape_list_.push_back(current_shape_);
+                current_shape_.reset();
+            }
         }
     }
 }
 
 void Canvas::mouse_move_event()
 {
-    // HW1_TODO: Drawing rule for more primitives
     if (draw_status_)
     {
         end_point_ = mouse_pos_in_canvas();
@@ -151,7 +211,14 @@ void Canvas::mouse_move_event()
 
 void Canvas::mouse_release_event()
 {
-    // HW1_TODO: Drawing rule for more primitives
+    if (is_drawing_polygon)
+    {
+        is_drawing_polygon = false;
+        draw_status_ = false;
+        current_shape_->addpoint();
+        shape_list_.push_back(current_shape_);
+        current_shape_.reset();
+    }
 }
 
 ImVec2 Canvas::mouse_pos_in_canvas() const

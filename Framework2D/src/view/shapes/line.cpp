@@ -5,7 +5,7 @@
 namespace USTC_CG
 {
 // Draw the line using ImGui
-void Line::draw(const Config& config) const
+void Line::draw() const
 {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -25,5 +25,9 @@ void Line::update(float x, float y)
 {
     end_point_x_ = x;
     end_point_y_ = y;
+}
+
+void Line::addpoint()
+{
 }
 }  // namespace USTC_CG
