@@ -1,6 +1,7 @@
 #pragma once
 
 #include "view/comp_image.h"
+#include "warping.h"
 
 namespace USTC_CG
 {
@@ -25,6 +26,16 @@ class CompWarping : public ImageEditor
     void select_points();
     void init_selections();
 
+    void set_fish();
+    void set_IDW();
+    
+    enum WarpType
+    {
+        kDefault = 0,
+        kfish = 1,
+        kIDW = 2,
+    };
+
    private:
     // Store the original image data
     std::shared_ptr<Image> back_up_;
@@ -34,6 +45,10 @@ class CompWarping : public ImageEditor
     ImVec2 start_, end_;
     bool flag_enable_selecting_points_ = false;
     bool draw_status_ = false;
+
+    // here we define current method of warping
+    std::shared_ptr<Warping> current_warp_method;
+    WarpType current_type;
 
    private:
     // A simple "fish-eye" warping function

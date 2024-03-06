@@ -69,13 +69,20 @@ void ImageWarping::draw_toolbar()
             p_image_->init_selections();
             p_image_->enable_selecting(true);
         }
-        if (ImGui::MenuItem("Warping") && p_image_)
+        if (ImGui::MenuItem("WarpingFish") && p_image_)
         {
             p_image_->enable_selecting(false);
+            p_image_->set_fish();
             p_image_->warping();
             p_image_->init_selections();
         }
-        // HW2_TODO: You can add more interactions for IDW, RBF, etc.
+        if (ImGui::MenuItem("WarpingIDW") && p_image_)
+        {
+            p_image_->enable_selecting(false);
+            p_image_->set_IDW();
+            p_image_->warping();
+            p_image_->init_selections();
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Restore") && p_image_)
         {

@@ -1,4 +1,7 @@
 #include "comp_warping.h"
+#include "warping.h"
+#include "warpingIDW.h"
+#include "warpingfish.h"
 
 #include <cmath>
 
@@ -105,6 +108,15 @@ void CompWarping::gray_scale()
     // After change the image, we should reload the image data to the renderer
     update();
 }
+void CompWarping::set_fish()
+{
+    current_type = kfish;
+}
+void CompWarping::set_IDW()
+{
+    current_type = kIDW;
+}
+
 void CompWarping::warping()
 {
     // HW2_TODO: You should implement your own warping function that interpolate
@@ -134,8 +146,32 @@ void CompWarping::warping()
         for (int x = 0; x < data_->width(); ++x)
         {
             // Apply warping function to (x, y), and we can get (x', y')
-            auto [new_x, new_y] =
-                fisheye_warping(x, y, data_->width(), data_->height());
+            auto [new_x, new_y] = std::make_pair(x,y);
+            switch (current_type)
+            {
+                case kDefault:
+                {
+                    break;
+                } 
+                case USTC_CG::CompWarping::kfish:
+                {
+                    current_warp_method = std::make_shared<WarpingFish>();
+                    current_warp_method->set_hw(data_->height(),data_->width());
+                    new_x = current_warp_method->warping(x, y).first;
+                    new_y = current_warp_method->warping(x, y).second;
+                    break;
+                }
+                case USTC_CG::CompWarping::kIDW:
+                {
+                    current_warp_method = std::make_shared<WarpingIDW>();
+                    current_warp_method->set_pq(start_points_, end_points_);
+                    new_x = current_warp_method->warping(x, y).first;
+                    new_y = current_warp_method->warping(x, y).second;
+                    break;
+                }
+                default:break;
+            }
+            
             // Copy the color from the original image to the result image
             if (new_x >= 0 && new_x < data_->width() && new_y >= 0 &&
                 new_y < data_->height())
