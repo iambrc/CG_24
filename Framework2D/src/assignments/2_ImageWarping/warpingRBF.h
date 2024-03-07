@@ -24,6 +24,7 @@ namespace USTC_CG
         private:
          std::vector<ImVec2> p,q;
          std::vector<float> px{}, py{}, qx{}, qy{};
+         // result is the solution of linear equations
          std::vector<float> result;
 
     };

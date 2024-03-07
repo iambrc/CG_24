@@ -132,6 +132,15 @@ void CompWarping::warping()
 
     // Create a new image to store the result
     Image warped_image(*data_);
+    std::vector<std::vector<bool>> is_changed(data_->width(),std::vector<bool>(data_->height()));
+    // we use this matrix to judge if the pixel need to be fixed or not
+    for (size_t i = 0; i < is_changed.size(); i++)
+    {
+        for (size_t j = 0; j < is_changed[0].size(); j++)
+        {
+            is_changed[i][j] = false;
+        }
+    }
     // Initialize the color of result image
     for (int y = 0; y < data_->height(); ++y)
     {
@@ -186,10 +195,57 @@ void CompWarping::warping()
             {
                 std::vector<unsigned char> pixel = data_->get_pixel(x, y);
                 warped_image.set_pixel(new_x, new_y, pixel);
+                is_changed[new_x][new_y] = true;
             }
         }
     }
-
+    // here we fix the white hole in picture
+    for (int y = 2; y < data_->height() - 2; ++y)
+    {
+        for (int x = 2; x < data_->width() - 2; ++x)
+        {
+            // we find the default pixels and fix them
+            if (!is_changed[x][y])
+            {
+                std::vector<float> changed_x{}, changed_y{};
+                std::vector<float> change_color{0.0f, 0.0f, 0.0f};
+                for (int i = x - 2; i < x + 3; i++)
+                {
+                    for (int j = y - 2; j < y + 3; j++)
+                    {
+                        // we use pixels that are not default to calculate the center pixel
+                        if (is_changed[i][j])
+                        {
+                            changed_x.push_back(float(i));
+                            changed_y.push_back(float(j));
+                        }
+                    }
+                }
+                size_t len = changed_x.size();
+                std::vector<float> sigma(len);
+                float sum_sigma = 0.0f;
+                for (size_t k = 0; k < len; k++)
+                {
+                    sigma[k] = 1.0f / float((changed_x[k]-x)*(changed_x[k]-x) + 
+                        (changed_y[k]-y)*(changed_y[k]-y));
+                    sum_sigma += sigma[k];
+                }
+                for (size_t k = 0; k < len; k++)
+                {
+                    std::vector<unsigned char> xy_pixel = warped_image.get_pixel(int(changed_x[k]),int(changed_y[k]));
+                    change_color[0] += (sigma[k] / sum_sigma) * float(xy_pixel[0]);
+                    change_color[1] += (sigma[k] / sum_sigma) * float(xy_pixel[1]);
+                    change_color[2] += (sigma[k] / sum_sigma) * float(xy_pixel[2]);
+                }
+                // change float to unsigned char
+                std::vector<unsigned char> changed_color(3);
+                changed_color[0] = unsigned char(change_color[0]);
+                changed_color[1] = unsigned char(change_color[1]);
+                changed_color[2] = unsigned char(change_color[2]);
+                warped_image.set_pixel(x, y, changed_color);
+            }
+        }
+    }
     *data_ = std::move(warped_image);
     update();
 }

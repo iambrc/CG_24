@@ -57,6 +57,8 @@ void WarpingRBF::set_hw(int h, int w)
 
 void WarpingRBF::prepare()
 {
+    // This function can calculate the result before calculating new_x & new_y
+    // In this way we can avoid repeating solving linear equations
     size_t len = px.size();
     Eigen::MatrixXf A(2*len + 6, 2*len + 6);
     Eigen::MatrixXf b(2*len + 6, 1);
