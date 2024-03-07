@@ -18,6 +18,8 @@ namespace USTC_CG
          
          void set_hw(int h, int w);
 
+         void prepare();
+
         private:
          std::vector<ImVec2> p,q;
          std::vector<float> px{}, py{}, qx{}, qy{};

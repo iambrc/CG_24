@@ -79,4 +79,9 @@ void WarpingIDW::set_pq(std::vector<ImVec2> start_points, std::vector<ImVec2> en
 void WarpingIDW::set_hw(int h, int w)
 {
 }
+
+void WarpingIDW::prepare()
+{
+    
+}
 }

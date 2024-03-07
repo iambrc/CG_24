@@ -28,12 +28,14 @@ class CompWarping : public ImageEditor
 
     void set_fish();
     void set_IDW();
+    void set_RBF();
     
     enum WarpType
     {
         kDefault = 0,
         kfish = 1,
         kIDW = 2,
+        kRBF = 3,
     };
 
    private:

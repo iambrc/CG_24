@@ -2,6 +2,7 @@
 #include "warping.h"
 #include "warpingIDW.h"
 #include "warpingfish.h"
+#include "warpingRBF.h"
 
 #include <cmath>
 
@@ -116,6 +117,10 @@ void CompWarping::set_IDW()
 {
     current_type = kIDW;
 }
+void CompWarping::set_RBF()
+{
+    current_type = kRBF;
+}
 
 void CompWarping::warping()
 {
@@ -132,7 +137,7 @@ void CompWarping::warping()
     {
         for (int x = 0; x < data_->width(); ++x)
         {
-            warped_image.set_pixel(x, y, { 0, 0, 0 });
+            warped_image.set_pixel(x, y, { 255, 255, 255 });
         }
     }
 
@@ -141,36 +146,39 @@ void CompWarping::warping()
     // to (x', y') in the new image:
     // Note: For this transformation ("fish-eye" warping), one can also
     // calculate the inverse (x', y') -> (x, y) to fill in the "gaps".
+    switch (current_type)
+    {
+        case kDefault:
+        {
+            break;
+        } 
+        case USTC_CG::CompWarping::kfish:
+        {
+            current_warp_method = std::make_shared<WarpingFish>();
+            current_warp_method->set_hw(data_->height(),data_->width());
+            break;
+        }
+        case USTC_CG::CompWarping::kIDW:
+        {
+            current_warp_method = std::make_shared<WarpingIDW>();
+            current_warp_method->set_pq(start_points_, end_points_);
+            break;
+        }
+        case USTC_CG::CompWarping::kRBF:
+        {
+            current_warp_method = std::make_shared<WarpingRBF>();
+            current_warp_method->set_pq(start_points_, end_points_);
+            current_warp_method->prepare();
+            break;
+        }
+        default:break;
+    }
     for (int y = 0; y < data_->height(); ++y)
     {
         for (int x = 0; x < data_->width(); ++x)
         {
             // Apply warping function to (x, y), and we can get (x', y')
-            auto [new_x, new_y] = std::make_pair(x,y);
-            switch (current_type)
-            {
-                case kDefault:
-                {
-                    break;
-                } 
-                case USTC_CG::CompWarping::kfish:
-                {
-                    current_warp_method = std::make_shared<WarpingFish>();
-                    current_warp_method->set_hw(data_->height(),data_->width());
-                    new_x = current_warp_method->warping(x, y).first;
-                    new_y = current_warp_method->warping(x, y).second;
-                    break;
-                }
-                case USTC_CG::CompWarping::kIDW:
-                {
-                    current_warp_method = std::make_shared<WarpingIDW>();
-                    current_warp_method->set_pq(start_points_, end_points_);
-                    new_x = current_warp_method->warping(x, y).first;
-                    new_y = current_warp_method->warping(x, y).second;
-                    break;
-                }
-                default:break;
-            }
+            auto [new_x, new_y] = current_warp_method->warping(x, y);
             
             // Copy the color from the original image to the result image
             if (new_x >= 0 && new_x < data_->width() && new_y >= 0 &&

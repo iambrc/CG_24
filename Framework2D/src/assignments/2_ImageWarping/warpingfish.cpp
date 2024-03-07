@@ -37,4 +37,8 @@ void WarpingFish::set_hw(int h, int w)
     width = w;
 }
 
+void WarpingFish::prepare()
+{
+    
+}
 }

@@ -5,6 +5,9 @@ file(GLOB source
 )
 add_executable(${PROJECT_NAME} ${source})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/_deps
+)
 set_target_properties(${PROJECT_NAME} PROPERTIES 
   DEBUG_POSTFIX "_d"
   RUNTIME_OUTPUT_DIRECTORY "${BINARY_DIR}"
