@@ -49,7 +49,7 @@ std::pair<int, int> WarpingIDW::warping(int x, int y)
     // calculate new x,y
     for (size_t i = 0; i < len; i++)
     {
-        float delta_x = float(x) - qx[i], delta_y = float(y) - qy[i];
+        float delta_x = float(x) - px[i], delta_y = float(y) - py[i];
         new_x += w[i]*qx[i] + w[i]* (delta_x*(sum_w_pypy[i]*sum_pxqx[i]-sum_w_pxpy[i]*sum_pxqy[i]) + 
             delta_y*(sum_w_pypy[i]*sum_pyqx[i]-sum_w_pxpy[i]*sum_pyqy[i])) 
             / (sum_w_pxpx[i]*sum_w_pypy[i] - sum_w_pxpy[i]*sum_w_pxpy[i]);
