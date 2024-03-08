@@ -6,8 +6,8 @@ namespace USTC_CG
 // function of R
 float R(float x1, float y1, float x2, float y2)
 {
-    // R(d) = exp(-d*d)
-    //return float(std::exp(-(x1-x2)*(x1-x2)-(y1-y2)*(y1-y2)));
+    // R(d) = exp(-d*d/2)
+    //return float(std::exp(-(x1-x2)*(x1-x2)/2-(y1-y2)*(y1-y2)/2));
 
     // R(d) = (d*d + r*r)^mu, r = 1, mu = 1
     return float(std::pow((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2) + 1,0.5));

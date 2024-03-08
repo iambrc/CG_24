@@ -51,10 +51,6 @@ class CompWarping : public ImageEditor
     // here we define current method of warping
     std::shared_ptr<Warping> current_warp_method;
     WarpType current_type;
-
-   private:
-    // A simple "fish-eye" warping function
-    std::pair<int, int> fisheye_warping(int x, int y, int width, int height);
 };
 
 }  // namespace USTC_CG
