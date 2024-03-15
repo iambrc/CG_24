@@ -313,3 +313,4 @@ void CompWarping::init_selections()
     start_points_.clear();
     end_points_.clear();
 }
+}
