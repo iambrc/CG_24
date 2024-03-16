@@ -36,5 +36,16 @@ void Ellipse::update(float x, float y)
 void Ellipse::addpoint()
 {
 }
+std::vector<float> Ellipse::get_pointx()
+{
+    std::vector<float> q{};
+    return q;
+}
+
+std::vector<float> Ellipse::get_pointy()
+{
+    std::vector<float> q{};
+    return q;
+}
 
 }

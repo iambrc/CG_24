@@ -56,4 +56,18 @@ void Polygon::addpoint()
     point_y.push_back(current_point_y);
 }
 
+std::vector<float> Polygon::get_pointx()
+{
+    std::vector<float> points_draw_x = point_x;
+    points_draw_x.push_back(current_point_x);
+    return points_draw_x;
+}
+
+std::vector<float> Polygon::get_pointy()
+{
+    std::vector<float> points_draw_y = point_y;
+    points_draw_y.push_back(current_point_y);
+    return points_draw_y;
+}
+
 }

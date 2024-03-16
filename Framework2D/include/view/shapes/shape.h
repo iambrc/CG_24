@@ -1,4 +1,5 @@
 #pragma once
+#include<vector>
 
 namespace USTC_CG
 {
@@ -58,5 +59,8 @@ class Shape
 
     // add point while drawing polygon
     virtual void addpoint() = 0;
+
+    virtual std::vector<float> get_pointx()=0;
+    virtual std::vector<float> get_pointy()=0;
 };
 }  // namespace USTC_CG

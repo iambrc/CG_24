@@ -33,6 +33,9 @@ class Rect : public Shape
     void update(float x, float y) override;
     void addpoint();
 
+    std::vector<float> get_pointx();
+    std::vector<float> get_pointy();
+
    private:
     // Coordinates of the top-left and bottom-right corners of the rectangle
     float start_point_x_ = 0.0f, start_point_y_ = 0.0f;

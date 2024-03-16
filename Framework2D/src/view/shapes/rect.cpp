@@ -33,4 +33,17 @@ void Rect::addpoint()
 {
 }
 
+std::vector<float> Rect::get_pointx()
+{
+    std::vector<float> q{};
+    return q;
+}
+
+std::vector<float> Rect::get_pointy()
+{
+    std::vector<float> q{};
+    return q;
+}
+
+
 }  // namespace USTC_CG

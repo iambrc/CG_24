@@ -41,4 +41,16 @@ void Freehand::addpoint()
     point_x.push_back(current_point_x);
     point_y.push_back(current_point_y);
 }
+
+std::vector<float> Freehand::get_pointx()
+{
+    std::vector<float> q{};
+    return q;
+}
+
+std::vector<float> Freehand::get_pointy()
+{
+    std::vector<float> q{};
+    return q;
+}
 }

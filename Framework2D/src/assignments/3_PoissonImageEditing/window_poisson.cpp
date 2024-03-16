@@ -71,8 +71,15 @@ void WindowPoisson::draw_toolbar()
         add_tooltips(
             "On: Enable region selection in the source image. Drag left mouse "
             "to select rectangle (default) in the source.");
+        // 1=rect, 2=polygon
+        static int shape_type = 1;  // default shape = rect
+        ImGui::RadioButton("Rect", &shape_type, 1);
+        ImGui::RadioButton("Polygon", &shape_type, 2);
+
         if (p_source_)
-            p_source_->enable_selecting(selectable);
+            p_source_->enable_selecting(selectable,shape_type);
+
+
         static bool realtime = false;
         ImGui::Checkbox("Realtime", &realtime);
         add_tooltips(

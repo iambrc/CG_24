@@ -30,6 +30,9 @@ namespace USTC_CG
          // add current point to the freehand figure
          void addpoint();
 
+         std::vector<float> get_pointx();
+         std::vector<float> get_pointy();
+
 
         private:
          float current_point_x = 0.0f;

@@ -78,11 +78,13 @@ void CompTargetImage::set_paste()
 void CompTargetImage::set_seamless()
 {
     clone_type_ = kSeamless;
+    prepared_ = false;
 }
 
 void CompTargetImage::set_seamless_mix()
 {
     clone_type_ = kSeamlessMix;
+    prepared_ = false;
 }
 
 void CompTargetImage::clone()
@@ -95,6 +97,9 @@ void CompTargetImage::clone()
     // when the checkboard is selected. It is required to improve the efficiency
     // of your seamless cloning to achieve realtime editing. (Use decomposition
     // of sparse matrix before solve the linear system)
+    if (data_ == nullptr || source_image_ == nullptr ||
+        source_image_->get_region() == nullptr)
+        return;
     std::shared_ptr<Image> mask = source_image_->get_region();
     std::vector<std::vector<int>> index = source_image_->get_index();
     std::shared_ptr<Image> source_data = source_image_->get_data();
@@ -131,10 +136,13 @@ void CompTargetImage::clone()
         case USTC_CG::CompTargetImage::kSeamless:
         {
             restore();
-            current_method = std::make_shared<SeamlessD>();
-            current_method->set_size(source_image_->get_size());
+            if (!(flag_realtime_updating && prepared_))
+            {
+                current_method = std::make_shared<SeamlessD>();
+                current_method->set_size(source_image_->get_size());
+            }
             for (int i = 0; i < mask->width(); ++i)
-           {
+            {
                 for (int j = 0; j < mask->height(); ++j)
                 {                        
                     int tar_x =
@@ -152,8 +160,11 @@ void CompTargetImage::clone()
                     }
                 }
             }
-            current_method->prepare();
-            
+            if (!(flag_realtime_updating && prepared_))
+            {
+                current_method->prepare();
+                prepared_ = true;
+            }
             current_method->solve();
 
             // fill the new pixel
@@ -184,10 +195,13 @@ void CompTargetImage::clone()
         case USTC_CG::CompTargetImage::kSeamlessMix:
         {
             restore();
-            current_method = std::make_shared<SeamlessMix>();
-            current_method->set_size(source_image_->get_size());
+            if (!(flag_realtime_updating && prepared_))
+            {
+                current_method = std::make_shared<SeamlessMix>();
+                current_method->set_size(source_image_->get_size());
+            }   
             for (int i = 0; i < mask->width(); ++i)
-           {
+            {
                 for (int j = 0; j < mask->height(); ++j)
                 {                        
                     int tar_x =
@@ -205,10 +219,14 @@ void CompTargetImage::clone()
                     }
                 }
             }
-            current_method->prepare();
+            if (!(flag_realtime_updating && prepared_))
+            {
+                current_method->prepare();
+                prepared_ = true;
+            }
             
             current_method->solve();
-
+            
             // fill the new pixel
             for (int i = 0; i < mask->width(); ++i)
             {

@@ -30,4 +30,16 @@ void Line::update(float x, float y)
 void Line::addpoint()
 {
 }
+
+std::vector<float> Line::get_pointx()
+{
+    std::vector<float> q{};
+    return q;
+}
+
+std::vector<float> Line::get_pointy()
+{
+    std::vector<float> q{};
+    return q;
+}
 }  // namespace USTC_CG
