@@ -4,6 +4,8 @@
 #include "Nodes/node_register.h"
 #include "geom_node_base.h"
 #include "utils/util_openmesh_bind.h"
+#include <cmath>
+#include <Eigen/Sparse>
 
 /*
 ** @brief HW4_TutteParameterization
@@ -25,10 +27,6 @@
 
 namespace USTC_CG::node_boundary_mapping {
 
-/*
-** HW4_TODO: Node to map the mesh boundary to a circle.
-*/
-
 static void node_map_boundary_to_circle_declare(NodeDeclarationBuilder& b)
 {
     // Input-1: Original 3D mesh with boundary
@@ -48,8 +46,6 @@ static void node_map_boundary_to_circle_exec(ExeParams params)
     if (!input.get_component<MeshComponent>()) {
         throw std::runtime_error("Boundary Mapping: Need Geometry Input.");
     }
-    throw std::runtime_error("Not implemented");
-
     /* ----------------------------- Preprocess -------------------------------
     ** Create a halfedge structure (using OpenMesh) for the input mesh. The
     ** half-edge data structure is a widely used data structure in geometric
@@ -57,27 +53,57 @@ static void node_map_boundary_to_circle_exec(ExeParams params)
     ** mesh elements.
     */
     auto halfedge_mesh = operand_to_openmesh(&input);
+    
+    double total_len = 0.0;
+    pxr::VtArray<double> edge_len{};
+    OpenMesh::SmartVertexHandle current_vertex;
+    // first we find the first edge vertex
+    for (const auto& vertex_handle : halfedge_mesh->vertices())
+    {
+        if (vertex_handle.is_boundary())
+        {
+            current_vertex = vertex_handle;
+            break;
+        }
+    }
+    // then we can loop all the egde vertex by order
+    OpenMesh::SmartVertexHandle edge_vertex = current_vertex;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                const auto& v1 = halfedge_mesh->point(edge_vertex);
+                const auto& v2 = halfedge_mesh->point(halfedge_handle.to());
+                float l = (v1-v2).norm();
+                edge_len.push_back(l);
+                total_len += l;
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != current_vertex);
 
-    /* ----------- [HW4_TODO] TASK 2.1: Boundary Mapping (to circle) ------------
-    ** In this task, you are required to map the boundary of the mesh to a circle
-    ** shape while ensuring the internal vertices remain unaffected. This step is
-    ** crucial for setting up the mesh for subsequent parameterization tasks.
-    **
-    ** Algorithm Pseudocode for Boundary Mapping to Circle
-    ** ------------------------------------------------------------------------
-    ** 1. Identify the boundary loop(s) of the mesh using the half-edge structure.
-    **
-    ** 2. Calculate the total length of the boundary loop to determine the spacing
-    **    between vertices when mapped to a square.
-    **
-    ** 3. Sequentially assign each boundary vertex a new position along the square's
-    **    perimeter, maintaining the calculated spacing to ensure even distribution.
-    **
-    ** 4. Keep the interior vertices' positions unchanged during this process.
-    **
-    ** Note: How to distribute the points on the circle?
-    */
-
+    // set the boundary vertex to the circle
+    double current_len = 0.0, Radius = 1.0;
+    size_t i = 0;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                OpenMesh::DefaultTraits::Point new_point;
+                new_point[0] = Radius*cos((current_len/total_len)*2*acos(-1.0));
+                new_point[1] = Radius*sin((current_len/total_len)*2*acos(-1.0));
+                new_point[2] = 0;
+                current_len += edge_len[i++];
+                halfedge_mesh->set_point(edge_vertex, new_point);
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != current_vertex);
+    
     /* ----------------------------- Postprocess ------------------------------
     ** Convert the result mesh from the halfedge structure back to GOperandBase format as the node's
     ** output.
@@ -91,10 +117,6 @@ static void node_map_boundary_to_circle_exec(ExeParams params)
     // Set the output of the nodes
     params.set_output("Output", std::move(output));
 }
-
-/*
-** HW4_TODO: Node to map the mesh boundary to a square.
-*/
 
 static void node_map_boundary_to_square_declare(NodeDeclarationBuilder& b)
 {
@@ -115,28 +137,165 @@ static void node_map_boundary_to_square_exec(ExeParams params)
     if (!input.get_component<MeshComponent>()) {
         throw std::runtime_error("Input does not contain a mesh");
     }
-    throw std::runtime_error("Not implemented");
 
     /* ----------------------------- Preprocess -------------------------------
     ** Create a halfedge structure (using OpenMesh) for the input mesh.
     */
     auto halfedge_mesh = operand_to_openmesh(&input);
 
-    /* ----------- [HW4_TODO] TASK 2.2: Boundary Mapping (to square) ------------
-    ** In this task, you are required to map the boundary of the mesh to a circle
-    ** shape while ensuring the internal vertices remain unaffected.
-    **
-    ** Algorithm Pseudocode for Boundary Mapping to Square
-    ** ------------------------------------------------------------------------
-    ** (omitted)
-    **
-    ** Note: Can you perserve the 4 corners of the square after boundary mapping?
-    */
+    double total_len = 0.0;
+    pxr::VtArray<double> edge_len{};
+    // we need find four vertices to fix the corner of the square
+    OpenMesh::SmartVertexHandle vertex_1, vertex_2, vertex_3, vertex_4;
+    // first we find the first vertex
+    for (const auto& vertex_handle : halfedge_mesh->vertices())
+    {
+        if (vertex_handle.is_boundary())
+        {
+            vertex_1 = vertex_handle;
+            break;
+        }
+    }
+    // then we calculate the length of each edge
+    OpenMesh::SmartVertexHandle edge_vertex = vertex_1;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                const auto& v1 = halfedge_mesh->point(edge_vertex);
+                const auto& v2 = halfedge_mesh->point(halfedge_handle.to());
+                float l = (v1-v2).norm();
+                edge_len.push_back(l);
+                total_len += l;
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_1);
 
-    /* ----------------------------- Postprocess ------------------------------
-    ** Convert the result mesh from the halfedge structure back to GOperandBase format as the node's
-    ** output.
-    */
+    // next step: find other three corners of the square through the length of edges
+    size_t i = 0;
+    double current_len = 0.0;
+    double total_len_1, total_len_2, total_len_3, total_len_4;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                if (current_len <= total_len/4 && current_len+edge_len[i] >= total_len/4)
+                {
+                    total_len_1 = total_len/4 - current_len < current_len+edge_len[i] - total_len/4 ?
+                         current_len : current_len+edge_len[i];
+                    // compare which vertex is closer to the corner
+                    if (total_len_1 == current_len)
+                        vertex_2 = edge_vertex;
+                    else
+                        vertex_2 = halfedge_handle.to();
+                }
+                if (current_len <= total_len/2 && current_len+edge_len[i] >= total_len/2)
+                {
+                    total_len_2 = total_len/2 - current_len < current_len+edge_len[i] - total_len/2 ?
+                        current_len : current_len+edge_len[i];
+                    // compare which vertex is closer to the corner
+                    if (total_len_2 == current_len)
+                        vertex_3 = edge_vertex;
+                    else
+                        vertex_3 = halfedge_handle.to();
+                    total_len_2 -= total_len_1;
+                }
+                if (current_len <= 3*total_len/4 && current_len+edge_len[i] >= 3*total_len/4)
+                {
+                    total_len_3 = 3*total_len/4 - current_len < current_len+edge_len[i] - 3*total_len/4 ?
+                        current_len : current_len+edge_len[i];
+                    // compare which vertex is closer to the corner
+                    if (total_len_3 == current_len)
+                        vertex_4 = edge_vertex;
+                    else
+                        vertex_4 = halfedge_handle.to();
+                    total_len_3 -= total_len_1 + total_len_2;
+                }
+                current_len += edge_len[i];
+                i++;
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_1);
+    total_len_4 = total_len - total_len_1 - total_len_2 - total_len_3;
+
+    // next step : cut the boundary into four pieces and map them to the four edges of the square
+    double a = 1.0;
+    current_len = 0.0;
+    i = 0;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                OpenMesh::DefaultTraits::Point new_point;
+                new_point[0] = 0;
+                new_point[1] = (current_len/total_len_1)*a;
+                new_point[2] = 0;
+                current_len += edge_len[i++];
+                halfedge_mesh->set_point(edge_vertex, new_point);
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_2);
+    current_len = 0.0;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                OpenMesh::DefaultTraits::Point new_point;
+                new_point[0] = 0;
+                new_point[1] = 1.0;
+                new_point[2] = (current_len/total_len_2)*a;
+                current_len += edge_len[i++];
+                halfedge_mesh->set_point(edge_vertex, new_point);
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_3);
+    current_len = 0.0;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                OpenMesh::DefaultTraits::Point new_point;
+                new_point[0] = 0;
+                new_point[1] = a - (current_len/total_len_3)*a;
+                new_point[2] = 1.0;
+                current_len += edge_len[i++];
+                halfedge_mesh->set_point(edge_vertex, new_point);
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_4);
+    current_len = 0.0;
+    do{
+        for (const auto& halfedge_handle : edge_vertex.outgoing_halfedges())
+        {
+            if (halfedge_handle.is_boundary())
+            {
+                OpenMesh::DefaultTraits::Point new_point;
+                new_point[0] = 0;
+                new_point[1] = 0;
+                new_point[2] = a - (current_len/total_len_4)*a;
+                current_len += edge_len[i++];
+                halfedge_mesh->set_point(edge_vertex, new_point);
+                edge_vertex = halfedge_handle.to();
+                break;
+            }
+        }
+    }while (edge_vertex != vertex_1);
+
     auto operand_base = openmesh_to_operand(halfedge_mesh.get());
 
     // Set the output of the nodes

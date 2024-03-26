@@ -29,6 +29,7 @@ static void node_declare(NodeDeclarationBuilder& b)
 
 static void node_exec(ExeParams params)
 {
+    
     auto geometry = params.get_input<GOperandBase>("Geometry");
 
     auto t_x = params.get_input<float>("Translate X");
@@ -55,6 +56,7 @@ static void node_exec(ExeParams params)
     xform->rotation.push_back(pxr::GfVec3f(r_x, r_y, r_z));
 
     params.set_output("Geometry", std::move(geometry));
+    
 }
 
 static void node_register()
