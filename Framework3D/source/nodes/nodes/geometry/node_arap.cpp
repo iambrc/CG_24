@@ -4,6 +4,9 @@
 #include "Nodes/node_register.h"
 #include "geom_node_base.h"
 #include "utils/util_openmesh_bind.h"
+#include <Eigen/Sparse>
+#include "utils/util_arap.h"
+#include <vector>
 
 /*
 ** @brief HW5_ARAP_Parameterization
@@ -31,6 +34,10 @@ static void node_arap_declare(NodeDeclarationBuilder& b)
     // Input-1: Original 3D mesh with boundary
     // Maybe you need to add another input for initialization?
     b.add_input<decl::Geometry>("Input");
+    b.add_input<decl::Geometry>("Origin Mesh");
+    b.add_input<decl::Int>("fix index1").min(0).max(3000).default_val(0);
+    b.add_input<decl::Int>("fix index2").min(0).max(3000).default_val(0);
+
 
     /*
     ** NOTE: You can add more inputs or outputs if necessary. For example, in
@@ -55,13 +62,13 @@ static void node_arap_exec(ExeParams params)
 {
     // Get the input from params
     auto input = params.get_input<GOperandBase>("Input");
-
+    auto input2 = params.get_input<GOperandBase>("Origin Mesh");
     // Avoid processing the node when there is no input
-    if (!input.get_component<MeshComponent>()) {
+    if (!(input.get_component<MeshComponent>() && input2.get_component<MeshComponent>())) {
         throw std::runtime_error("Need Geometry Input.");
     }
-    throw std::runtime_error("Not implemented");
-
+    int fix1 = params.get_input<int>("fix index1");
+    int fix2 = params.get_input<int>("fix index2");
     /* ----------------------------- Preprocess -------------------------------
     ** Create a halfedge structure (using OpenMesh) for the input mesh. The
     ** half-edge data structure is a widely used data structure in geometric
@@ -69,7 +76,50 @@ static void node_arap_exec(ExeParams params)
     ** mesh elements.
     */
     auto halfedge_mesh = operand_to_openmesh(&input);
+    auto origin_mesh = operand_to_openmesh(&input2);
 
+    Arap* arap = new Arap;
+    double energy = 0, energy_new = 1;
+    arap->init(origin_mesh, halfedge_mesh);
+    arap->set_uv_mesh();
+    arap->set_flatxy();
+    arap->set_fixed(fix1, fix2);
+    arap->set_cotangent();
+    arap->set_matrixA();
+
+    arap->set_matrixLt();
+    arap->SVD_Lt();
+    arap->set_Laplacian();
+    energy_new = arap->energy_cal();
+    arap->set_new_mesh();
+    arap->reset_mesh();
+
+    
+    int flag = 0;
+    while (fabs(energy - energy_new) > 0.01 && flag < 100)
+    {
+        energy = energy_new;
+        arap->set_matrixLt();
+        arap->SVD_Lt();
+        arap->set_Laplacian();
+        energy_new = arap->energy_cal();
+        arap->set_new_mesh();
+        arap->reset_mesh();
+        flag++;
+    }
+    
+    // The result UV coordinates
+    pxr::VtArray<pxr::GfVec2f> uv_result;
+    uv_result = arap->get_new_mesh();
+    // for test
+    /*
+    std::vector<float> x(uv_result.size()), y(uv_result.size());
+    for (int i = 0; i < x.size(); i++)
+    {
+        x[i] = uv_result[i][0];
+        y[i] = uv_result[i][1];
+    }
+    */
    /* ------------- [HW5_TODO] ARAP Parameterization Implementation -----------
    ** Implement ARAP mesh parameterization to minimize local distortion.
    **
@@ -88,9 +138,6 @@ static void node_arap_exec(ExeParams params)
    **  - Fixed points' selection is crucial for ARAP and ASAP.
    **  - Encapsulate algorithms into classes for modularity.
    */
-
-    // The result UV coordinates 
-    pxr::VtArray<pxr::GfVec2f> uv_result;
 
     // Set the output of the node
     params.set_output("OutputUV", uv_result);

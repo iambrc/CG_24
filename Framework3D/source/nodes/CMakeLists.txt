@@ -49,7 +49,7 @@ add_node_discovery(
   register_nodes 
 )
 
-add_library(nodes STATIC "${CPP_FILES}")
+add_library(nodes STATIC "${CPP_FILES}" "nodes/geometry/utils/util_arap.h" "nodes/geometry/utils/util_arap.cpp" "nodes/geometry/utils/util_asap.h" "nodes/geometry/utils/util_asap.cpp" "nodes/geometry/node_asap.cpp")
 
 target_link_libraries(nodes_generated nodes)
 target_link_libraries(nodes nodes_generated)
