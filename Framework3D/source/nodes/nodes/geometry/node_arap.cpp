@@ -87,13 +87,14 @@ static void node_arap_exec(ExeParams params)
     arap->set_cotangent();
     arap->set_matrixA();
 
+    /*
     arap->set_matrixLt();
     arap->SVD_Lt();
     arap->set_Laplacian();
     energy_new = arap->energy_cal();
     arap->set_new_mesh();
     arap->reset_mesh();
-
+    */
     
     int flag = 0;
     while (fabs(energy - energy_new) > 0.01 && flag < 100)

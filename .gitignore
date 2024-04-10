@@ -2,5 +2,6 @@ build/
 bin/
 libs/
 .vscode
+.vs
 imgui.ini
-Framework2D/.vs/Framework2D/v17/ipch/AutoPCH/9c98b138854d080b/COMP_WARPING.ipch
+.DS_Store

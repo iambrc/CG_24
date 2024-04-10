@@ -18,7 +18,7 @@ class Asap {
     // initialize the matrix A
     void set_matrixA();
     // set two fixed point's index
-    void set_fixed(int a, int b);
+    void set_fixed(int a, int b, int c);
     // set initial uv
     void set_uv_mesh();
     // set flat triangle
@@ -43,6 +43,6 @@ class Asap {
     pxr::VtArray<pxr::GfVec2f> uv_mesh, uv_result;
     pxr::VtArray<OpenMesh::Vec2f> flatxy;
     double energy;
-    int fix_ind1, fix_ind2;
+    int fix_ind1, fix_ind2, fix_ind3;
 };
 }  // namespace USTC_CG

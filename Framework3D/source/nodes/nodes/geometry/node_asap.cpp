@@ -16,6 +16,7 @@ static void node_asap_declare(NodeDeclarationBuilder& b)
     b.add_input<decl::Geometry>("Origin Mesh");
     b.add_input<decl::Int>("fix index1").min(0).max(3000).default_val(0);
     b.add_input<decl::Int>("fix index2").min(0).max(3000).default_val(0);
+    b.add_input<decl::Int>("fix index3").min(0).max(3000).default_val(0);
 
     b.add_output<decl::Float2Buffer>("OutputUV");
 }
@@ -31,43 +32,36 @@ static void node_asap_exec(ExeParams params)
     }
     int fix1 = params.get_input<int>("fix index1");
     int fix2 = params.get_input<int>("fix index2");
+    int fix3 = params.get_input<int>("fix index3");
 
     auto halfedge_mesh = operand_to_openmesh(&input);
     auto origin_mesh = operand_to_openmesh(&input2);
 
     Asap* asap = new Asap;
-    double energy = 0, energy_new = 1;
+    // double energy = 0, energy_new = 1;
     asap->init(origin_mesh, halfedge_mesh);
     asap->set_uv_mesh();
     asap->set_flatxy();
-    asap->set_fixed(fix1, fix2);
+    asap->set_fixed(fix1, fix2, fix3);
     asap->set_cotangent();
     asap->set_matrixA();
 
     asap->set_Laplacian();
-    energy_new = asap->energy_cal();
+    // i think there is no need to calculate energy
+    // energy_new = asap->energy_cal();
     asap->set_new_mesh();
-    asap->reset_mesh();
-
-    int flag = 0;
-    while (fabs(energy - energy_new) > 0.01 && flag < 3) {
-        energy = energy_new;
-        asap->set_Laplacian();
-        energy_new = asap->energy_cal();
-        asap->set_new_mesh();
-        asap->reset_mesh();
-        flag++;
-    }
+    // asap->reset_mesh();
 
     // The result UV coordinates
     pxr::VtArray<pxr::GfVec2f> uv_result;
     uv_result = asap->get_new_mesh();
+    /*
     std::vector<float> x(uv_result.size()), y(uv_result.size());
     for (int i = 0; i < x.size(); i++) {
         x[i] = uv_result[i][0];
         y[i] = uv_result[i][1];
     }
-
+    */
 
     params.set_output("OutputUV", uv_result);
 }

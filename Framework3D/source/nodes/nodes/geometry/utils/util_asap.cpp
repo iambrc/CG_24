@@ -36,9 +36,9 @@ void USTC_CG::Asap::set_matrixA()
     A.resize(2 * (nv + nf), 2 * (nv + nf));
     typedef Eigen::Triplet<double> T;
     std::vector<T> tlist;
-    for (const auto& vertex_handle : origin_mesh->vertices())
+    for (const auto& vertex_handle : mesh->vertices())
     {
-        if (vertex_handle.idx() == fix_ind1 || vertex_handle.idx() == fix_ind2) 
+        if (vertex_handle.idx() == fix_ind1 || vertex_handle.idx() == fix_ind2 || vertex_handle.idx() == fix_ind3) 
         {
             tlist.push_back(T(vertex_handle.idx(), vertex_handle.idx(), 1));
             tlist.push_back(T(vertex_handle.idx() + nv, vertex_handle.idx() + nv, 1));
@@ -55,44 +55,37 @@ void USTC_CG::Asap::set_matrixA()
                 if (!halfedge_handle.is_boundary())
                 {
                     int indfij = halfedge_handle.face().idx();
-                    tlist.push_back(T(
-                        vertex_handle.idx(), indfij + 2 * nv, 
+                    tlist.push_back(T(vertex_handle.idx(), indfij + 2 * nv, 
                         -tmp1 * (flatxy[halfedge_handle.next().idx()][0] - 
                             flatxy[halfedge_handle.prev().idx()][0])));
-                    tlist.push_back(
-                        T(vertex_handle.idx(),indfij + 2 * nv + nf,
+                    tlist.push_back(T(vertex_handle.idx(),indfij + 2 * nv + nf,
                           -tmp1 * (flatxy[halfedge_handle.next().idx()][1] -
                                    flatxy[halfedge_handle.prev().idx()][1])));
-                    tlist.push_back(
-                        T(vertex_handle.idx() + nv, indfij + 2 * nv,
+                    tlist.push_back(T(vertex_handle.idx() + nv, indfij + 2 * nv,
                           -tmp1 * (flatxy[halfedge_handle.next().idx()][1] -
                                    flatxy[halfedge_handle.prev().idx()][1])));
-                    tlist.push_back(
-                        T(vertex_handle.idx() + nv, indfij + 2 * nv + nf,
+                    tlist.push_back(T(vertex_handle.idx() + nv, indfij + 2 * nv + nf,
                           tmp1 * (flatxy[halfedge_handle.next().idx()][0] -
                                    flatxy[halfedge_handle.prev().idx()][0])));
                 }
                 if (!halfedge_handle.opp().is_boundary())
                 {
                     int indfji = halfedge_handle.opp().face().idx();
-                    tlist.push_back(
-                        T(vertex_handle.idx(), indfji + 2 * nv,
-                          -tmp2 * (flatxy[halfedge_handle.opp().next().idx()][0] -
-                                   flatxy[halfedge_handle.opp().prev().idx()][0])));
-                    tlist.push_back(
-                        T(vertex_handle.idx(), indfji + 2 * nv + nf,
-                          -tmp2 * (flatxy[halfedge_handle.opp().next().idx()][1] -
-                                   flatxy[halfedge_handle.opp().prev().idx()][1])));
-                    tlist.push_back(
-                        T(vertex_handle.idx() + nv, indfji + 2 * nv,
-                          -tmp2 * (flatxy[halfedge_handle.opp().next().idx()][1] -
-                                   flatxy[halfedge_handle.opp().prev().idx()][1])));
-                    tlist.push_back(
-                        T(vertex_handle.idx() + nv, indfji + 2 * nv + nf,
-                          tmp2 * (flatxy[halfedge_handle.opp().next().idx()][0] -
-                                  flatxy[halfedge_handle.opp().prev().idx()][0])));
+                    tlist.push_back(T(vertex_handle.idx(), indfji + 2 * nv,
+                          -tmp2 * (flatxy[halfedge_handle.opp().prev().idx()][0] -
+                                   flatxy[halfedge_handle.opp().next().idx()][0])));
+                    tlist.push_back(T(vertex_handle.idx(), indfji + 2 * nv + nf,
+                          -tmp2 * (flatxy[halfedge_handle.opp().prev().idx()][1] -
+                                   flatxy[halfedge_handle.opp().next().idx()][1])));
+                    tlist.push_back(T(vertex_handle.idx() + nv, indfji + 2 * nv,
+                          -tmp2 * (flatxy[halfedge_handle.opp().prev().idx()][1] -
+                                   flatxy[halfedge_handle.opp().next().idx()][1])));
+                    tlist.push_back(T(vertex_handle.idx() + nv, indfji + 2 * nv + nf,
+                          tmp2 * (flatxy[halfedge_handle.opp().prev().idx()][0] -
+                                  flatxy[halfedge_handle.opp().next().idx()][0])));
                 }
-                if (halfedge_handle.to().idx() != fix_ind1 && halfedge_handle.to().idx() != fix_ind2)
+                if (halfedge_handle.to().idx() != fix_ind1 && halfedge_handle.to().idx() != fix_ind2 && 
+                    halfedge_handle.to().idx() != fix_ind3)
                 {
                     tlist.push_back(T(vertex_handle.idx(), halfedge_handle.to().idx(), -tmp_));
                     tlist.push_back(
@@ -103,7 +96,7 @@ void USTC_CG::Asap::set_matrixA()
             tlist.push_back(T(vertex_handle.idx() + nv, vertex_handle.idx() + nv, tmp));
         }
     }
-    for (const auto& face_handle : origin_mesh->faces())
+    for (const auto& face_handle : mesh->faces())
     {
         int indf = face_handle.idx();
         const auto& halfedge_handle = face_handle.halfedge();
@@ -119,7 +112,7 @@ void USTC_CG::Asap::set_matrixA()
                                          pow(flatxy[indp][1] - flatxy[indh][1], 2));
         tlist.push_back(T(2 * nv + indf, 2 * nv + indf, tmp1));
         tlist.push_back(T(2 * nv + indf + nf, 2 * nv + indf + nf, tmp1));
-        if (ind1 != fix_ind1 && ind1 != fix_ind2)
+        if (ind1 != fix_ind1 && ind1 != fix_ind2 && ind1 != fix_ind3)
         {
             double t1 = cotangent[indp] * (flatxy[indh][0] - flatxy[indn][0]) -
                         cotangent[indh] * (flatxy[indn][0] - flatxy[indp][0]);
@@ -130,7 +123,7 @@ void USTC_CG::Asap::set_matrixA()
             tlist.push_back(T(2 * nv + indf + nf, ind1, t2));
             tlist.push_back(T(2 * nv + indf + nf, ind1 + nv, -t1));
         }
-        if (ind2 != fix_ind1 && ind2 != fix_ind2) 
+        if (ind2 != fix_ind1 && ind2 != fix_ind2 && ind2 != fix_ind3) 
         {
             double t1 = cotangent[indh] * (flatxy[indn][0] - flatxy[indp][0]) -
                         cotangent[indn] * (flatxy[indp][0] - flatxy[indh][0]);
@@ -141,7 +134,7 @@ void USTC_CG::Asap::set_matrixA()
             tlist.push_back(T(2 * nv + indf + nf, ind2, t2));
             tlist.push_back(T(2 * nv + indf + nf, ind2 + nv, -t1));
         }
-        if (ind3 != fix_ind1 && ind3 != fix_ind2) 
+        if (ind3 != fix_ind1 && ind3 != fix_ind2 && ind3 != fix_ind3) 
         {
             double t1 = cotangent[indn] * (flatxy[indp][0] - flatxy[indh][0]) -
                         cotangent[indp] * (flatxy[indh][0] - flatxy[indn][0]);
@@ -157,10 +150,11 @@ void USTC_CG::Asap::set_matrixA()
     solver.compute(A);
 }
 
-void USTC_CG::Asap::set_fixed(int a, int b)
+void USTC_CG::Asap::set_fixed(int a, int b, int c)
 {
     fix_ind1 = a;
     fix_ind2 = b;
+    fix_ind3 = c;
 }
 
 void USTC_CG::Asap::set_uv_mesh()
@@ -212,7 +206,7 @@ void USTC_CG::Asap::set_Laplacian()
     for (const auto& vertex_handle : mesh->vertices())
     {
         int indx = vertex_handle.idx();
-        if (indx == fix_ind1 || indx == fix_ind2)
+        if (indx == fix_ind1 || indx == fix_ind2 || indx == fix_ind3)
         {
             xyab(indx) = uv_mesh[indx][0];
             xyab(indx + nv) = uv_mesh[indx][1]; 
@@ -226,7 +220,7 @@ void USTC_CG::Asap::set_Laplacian()
                 int indh = halfedge_handle.to().idx();
                 int indij = halfedge_handle.idx();
                 int indji = halfedge_handle.opp().idx();
-                if (indh == fix_ind1 || indh == fix_ind2)
+                if (indh == fix_ind1 || indh == fix_ind2 || indh == fix_ind3)
                 {
                     xyab(indx) += (cotangent[indij] + cotangent[indji]) * uv_mesh[indh][0];
                     xyab(indx + nv) += (cotangent[indij] + cotangent[indji]) * uv_mesh[indh][1];
@@ -234,8 +228,7 @@ void USTC_CG::Asap::set_Laplacian()
             }
         }
     }
-    for (const auto& face_handle : mesh->faces())
-    {
+    for (const auto& face_handle : mesh->faces()) {
         int indf = face_handle.idx();
         xyab(2 * nv + indf) = 0;
         xyab(2 * nv + indf + nf) = 0;
@@ -244,8 +237,7 @@ void USTC_CG::Asap::set_Laplacian()
             ind3 = halfedge_handle.next().to().idx();
         int indh = halfedge_handle.idx(), indp = halfedge_handle.prev().idx(),
             indn = halfedge_handle.next().idx();
-        if (ind1 == fix_ind1 || ind1 == fix_ind2)
-        {
+        if (ind1 == fix_ind1 || ind1 == fix_ind2 || ind1 == fix_ind3) {
             double t1 = cotangent[indp] * (flatxy[indh][0] - flatxy[indn][0]) -
                         cotangent[indh] * (flatxy[indn][0] - flatxy[indp][0]);
             double t2 = cotangent[indp] * (flatxy[indh][1] - flatxy[indn][1]) -
@@ -253,7 +245,8 @@ void USTC_CG::Asap::set_Laplacian()
             xyab(2 * nv + indf) += -t1 * uv_mesh[ind1][0] - t2 * uv_mesh[ind1][1];
             xyab(2 * nv + indf + nf) += -t2 * uv_mesh[ind1][0] + t1 * uv_mesh[ind1][1];
         }
-        if (ind2 == fix_ind1 || ind2 == fix_ind2) {
+        if (ind2 == fix_ind1 || ind2 == fix_ind2 || ind2 == fix_ind3)
+        {
             double t1 = cotangent[indh] * (flatxy[indn][0] - flatxy[indp][0]) -
                          cotangent[indn] * (flatxy[indp][0] - flatxy[indh][0]);
             double t2 = cotangent[indh] * (flatxy[indn][1] - flatxy[indp][1]) -
@@ -261,10 +254,10 @@ void USTC_CG::Asap::set_Laplacian()
             xyab(2 * nv + indf) += -t1 * uv_mesh[ind2][0] - t2 * uv_mesh[ind2][1];
             xyab(2 * nv + indf + nf) += -t2 * uv_mesh[ind2][0] + t1 * uv_mesh[ind2][1];
         }
-        if (ind3 == fix_ind1 || ind3 == fix_ind2) {
-            double t1 = cotangent[indn] * (flatxy[indh][0] - flatxy[indp][0]) -
+        if (ind3 == fix_ind1 || ind3 == fix_ind2 || ind3 == fix_ind3) {
+            double t1 = cotangent[indn] * (flatxy[indp][0] - flatxy[indh][0]) -
                         cotangent[indp] * (flatxy[indh][0] - flatxy[indn][0]);
-            double t2 = cotangent[indn] * (flatxy[indh][1] - flatxy[indp][1]) -
+            double t2 = cotangent[indn] * (flatxy[indp][1] - flatxy[indh][1]) -
                         cotangent[indp] * (flatxy[indh][1] - flatxy[indn][1]);
             xyab(2 * nv + indf) += -t1 * uv_mesh[ind3][0] - t2 * uv_mesh[ind3][1];
             xyab(2 * nv + indf + nf) += -t2 * uv_mesh[ind3][0] + t1 * uv_mesh[ind3][1];
