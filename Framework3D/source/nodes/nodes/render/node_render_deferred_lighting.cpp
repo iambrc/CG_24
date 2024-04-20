@@ -13,11 +13,13 @@
 #include "resource_allocator_instance.hpp"
 #include "rich_type_buffer.hpp"
 #include "utils/draw_fullscreen.h"
+#include "pxr/base/gf/frustum.h"
 
 namespace USTC_CG::node_deferred_lighting {
 
 static void node_declare(NodeDeclarationBuilder& b)
 {
+    b.add_input<decl::Camera>("Camera");
     b.add_input<decl::Lights>("Lights");
 
     b.add_input<decl::Texture>("Position");
@@ -52,6 +54,17 @@ static void node_exec(ExeParams params)
     auto normal_texture = params.get_input<TextureHandle>("Normal");
 
     auto shadow_maps = params.get_input<TextureHandle>("Shadow Maps");
+
+    auto cameras = params.get_input<CameraArray>("Camera");
+
+    Hd_USTC_CG_Camera* free_camera;
+
+    for (auto camera : cameras) {
+        if (camera->GetId() != SdfPath::EmptyPath()) {
+            free_camera = camera;
+            break;
+        }
+    }
 
     // Creating output textures.
     auto size = position_texture->desc.size;
@@ -104,6 +117,9 @@ static void node_exec(ExeParams params)
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, position_texture->texture_id);
 
+    GfVec3f camPos = GfMatrix4f(free_camera->GetTransform()).ExtractTranslation();
+    shader->shader.setVec3("camPos", camPos);
+
     GLuint lightBuffer;
     glGenBuffers(1, &lightBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
@@ -117,9 +133,24 @@ static void node_exec(ExeParams params)
             pxr::GfVec3f diffuse3(diffuse4[0], diffuse4[1], diffuse4[2]);
             auto position4 = light_params.GetPosition();
             pxr::GfVec3f position3(position4[0], position4[1], position4[2]);
-            light_vector.emplace_back(GfMatrix4f(), GfMatrix4f(), position3, 0.f, diffuse3, i);
 
-            // You can add directional light here, and also the corresponding shadow map calculation part.
+            auto radius = lights[i]->Get(HdLightTokens->radius).Get<float>();
+            
+            GfMatrix4f light_view_mat;
+            GfMatrix4f light_projection_mat;
+            if (lights[i]->GetLightType() == HdPrimTypeTokens->sphereLight) {
+                GfFrustum frustum;
+                light_view_mat =
+                    GfMatrix4f().SetLookAt(position3, GfVec3f(0, 0, 0), GfVec3f(0, 0, 1));
+                frustum.SetPerspective(120.f, 1.0, 1, 25.f);
+                light_projection_mat = GfMatrix4f(frustum.ComputeProjectionMatrix());
+            }
+
+            light_vector.emplace_back(
+                light_projection_mat, light_view_mat, position3, 0.f, diffuse3, i);
+
+            // You can add directional light here, and also the corresponding shadow map calculation
+            // part.
         }
     }
 
@@ -142,6 +173,11 @@ static void node_exec(ExeParams params)
     glDeleteBuffers(1, &lightBuffer);
     glDeleteFramebuffers(1, &framebuffer);
     params.set_output("Color", color_texture);
+
+    auto shader_error = shader->shader.get_error();
+    if (!shader_error.empty()) {
+        throw std::runtime_error(shader_error);
+    }
 }
 
 static void node_register()

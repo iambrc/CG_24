@@ -1,8 +1,7 @@
 #pragma once
+
 #include "USTC_CG.h"
-#include "Utils/Logging/Logging.h"
-#include "Utils/Macro/map.h"
-#include "pxr/imaging/garch/glApi.h"
+#include "color.h"
 #include "pxr/imaging/hd/material.h"
 #include "pxr/imaging/hio/image.h"
 
@@ -12,6 +11,7 @@ class Hio_OpenEXRImage;
 }
 
 USTC_CG_NAMESPACE_OPEN_SCOPE
+class Texture2D;
 class Shader;
 using namespace pxr;
 
@@ -19,7 +19,7 @@ class Hio_StbImage;
 class Hd_USTC_CG_Material : public HdMaterial {
    public:
     struct InputDescriptor {
-        HioImageSharedPtr image = nullptr;
+        std::unique_ptr<Texture2D> image = nullptr;
 
         TfToken wrapS;
         TfToken wrapT;
@@ -28,7 +28,6 @@ class Hd_USTC_CG_Material : public HdMaterial {
 
         VtValue value;
 
-        GLuint glTexture = 0;
         TfToken input_name;
     };
 
@@ -37,13 +36,14 @@ class Hd_USTC_CG_Material : public HdMaterial {
     void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
         override;
 
-    void RefreshGLBuffer();
-    void BindTextures(Shader& shader);
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     TfToken requireTexcoordName();
 
     void Finalize(HdRenderParam* renderParam) override;
+    Color Sample(const GfVec3f& wo, GfVec3f& wi, float& pdf, GfVec2f texcoord, const std::function<float()>& uniform_float);
+    GfVec3f Eval(GfVec3f wi, GfVec3f wo, GfVec2f texcoord);
+    float Pdf(GfVec3f wi, GfVec3f wo, GfVec2f texcoord);
 
     InputDescriptor diffuseColor;
     InputDescriptor specularColor;
@@ -60,10 +60,24 @@ class Hd_USTC_CG_Material : public HdMaterial {
     InputDescriptor ior;
 
    private:
-    HdMaterialNetwork2 surfaceNetwork;
+    struct MaterialRecord {
+        GfVec3f diffuseColor;
+        GfVec3f specularColor;
+        GfVec3f emissiveColor;
+        GfVec3f displacement;
+        float opacity;
+        float opacityThreshold;
+        float roughness;
+        float metallic;
+        float clearcoat;
+        float clearcoatRoughness;
+        float occlusion;
+        GfVec3f normal;
+        float ior;
+    };
 
-    // Function to create an OpenGL texture from a HioImage object
-    GLuint createTextureFromHioImage(const InputDescriptor& descriptor);
+    MaterialRecord SampleMaterialRecord(GfVec2f texcoord);
+    HdMaterialNetwork2 surfaceNetwork;
 
     void TryLoadTexture(
         const char* str,
@@ -74,12 +88,9 @@ class Hd_USTC_CG_Material : public HdMaterial {
         InputDescriptor& descriptor,
         HdMaterialNode2& usd_preview_surface);
 
-    void TryCreateGLTexture(InputDescriptor& descriptor);
-
     HdMaterialNode2 get_input_connection(
         HdMaterialNetwork2 surfaceNetwork,
         std::map<TfToken, std::vector<HdMaterialConnection2>>::value_type& input_connection);
-    void DestroyTexture(InputDescriptor& input_descriptor);
 };
 
 USTC_CG_NAMESPACE_CLOSE_SCOPE
