@@ -115,8 +115,6 @@ Color Hd_USTC_CG_Sphere_Light::Sample(
 
     auto basis = constructONB(-distanceVec.GetNormalized());
 
-    auto distance = distanceVec.GetLength();
-
     // A sphere light is treated as all points on the surface spreads energy uniformly:
     float sample_pos_pdf;
     // First we sample a point on the hemi sphere:
@@ -129,6 +127,7 @@ Color Hd_USTC_CG_Sphere_Light::Sample(
 
     // Then we can decide the direction.
     dir = (sampledPosOnSurface - pos).GetNormalized();
+    auto distance = (sampledPosOnSurface - pos).GetLength();
 
     // and the pdf (with the measure of solid angle):
     float cosVal = GfDot(-dir, worldSampledDir.GetNormalized());
@@ -338,7 +337,7 @@ Color Hd_USTC_CG_Rect_Light::Intersect(const GfRay& ray, float& depth)
         depth = distance;
         return irradiance / M_PI;
     }
-    depth = depth = std::numeric_limits<float>::infinity();
+    depth = std::numeric_limits<float>::infinity();
     return Color(0);
 }
 
