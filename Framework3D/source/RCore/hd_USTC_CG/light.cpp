@@ -115,6 +115,8 @@ Color Hd_USTC_CG_Sphere_Light::Sample(
 
     auto basis = constructONB(-distanceVec.GetNormalized());
 
+    auto distance = distanceVec.GetLength();
+
     // A sphere light is treated as all points on the surface spreads energy uniformly:
     float sample_pos_pdf;
     // First we sample a point on the hemi sphere:
@@ -127,7 +129,6 @@ Color Hd_USTC_CG_Sphere_Light::Sample(
 
     // Then we can decide the direction.
     dir = (sampledPosOnSurface - pos).GetNormalized();
-    auto distance = (sampledPosOnSurface - pos).GetLength();
 
     // and the pdf (with the measure of solid angle):
     float cosVal = GfDot(-dir, worldSampledDir.GetNormalized());
@@ -314,31 +315,12 @@ Color Hd_USTC_CG_Rect_Light::Sample(
     float& sample_light_pdf,
     const std::function<float()>& uniform_float)
 {
-    sample_light_pdf = 1.0f / (width * height);
-    GfVec3f sample_pos =
-        GfVec3f((uniform_float() - 0.5) * width, (uniform_float() - 0.5) * height, 0);
-    auto transform = Get(HdTokens->transform).GetWithDefault<GfMatrix4d>();
-    sampled_light_pos = transform.TransformAffine(sample_pos);
-    GfVec3f normal = transform.TransformAffine(GfVec3f(0, 0, 1));
-
-    dir = sampled_light_pos - pos;
-    float cosVal = GfDot(dir.GetNormalized(), normal.GetNormalized());
-    if (cosVal < 0)
-        return Color(0);
-
-    return irradiance * cosVal / M_PI;
+    return {};
 }
 
 Color Hd_USTC_CG_Rect_Light::Intersect(const GfRay& ray, float& depth)
 {
-    double distance;
-    if (ray.Intersect(GfRange3d(corner0, corner3), &distance))
-    {
-        depth = distance;
-        return irradiance / M_PI;
-    }
-    depth = std::numeric_limits<float>::infinity();
-    return Color(0);
+    return {};
 }
 
 void Hd_USTC_CG_Rect_Light::Sync(
@@ -363,7 +345,6 @@ void Hd_USTC_CG_Rect_Light::Sync(
     power = sceneDelegate->GetLightParamValue(id, HdLightTokens->color).Get<GfVec3f>() * diffuse;
 
     // HW7_TODO: calculate irradiance
-    irradiance = power / (width * height);
 }
 
 USTC_CG_NAMESPACE_CLOSE_SCOPE

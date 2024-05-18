@@ -1,6 +1,5 @@
 #include "MassSpring.h"
 #include <iostream>
-#include <chrono>
 
 namespace USTC_CG::node_mass_spring {
 MassSpring::MassSpring(const Eigen::MatrixXd& X, const EdgeSet& E)
@@ -18,6 +17,7 @@ MassSpring::MassSpring(const Eigen::MatrixXd& X, const EdgeSet& E)
         Eigen::Vector3d x1 = X.row(e.second);
         this->E_rest_length.push_back((x0 - x1).norm());
     }
+    
 
     // Initialize the mask for Dirichlet boundary condition
     dirichlet_bc_mask.resize(X.rows(), false);
@@ -26,6 +26,8 @@ MassSpring::MassSpring(const Eigen::MatrixXd& X, const EdgeSet& E)
     unsigned n_fix = sqrt(X.rows());  // Here we assume the cloth is square
     dirichlet_bc_mask[0] = true;
     dirichlet_bc_mask[n_fix - 1] = true;
+    fix1 = 0;
+    fix2 = n_fix - 1;
 }
 
 void MassSpring::step()
@@ -49,20 +51,55 @@ void MassSpring::step()
         TIC(step)
 
         // (HW TODO) 
-        // auto H_elastic = computeHessianSparse(stiffness);  // size = [nx3, nx3]
-
+        auto H_elastic = computeHessianSparse(stiffness);  // size = [nx3, nx3]
+        
         // compute Y 
+        Eigen::MatrixXd acceleration = Eigen::MatrixXd::Zero(X.rows(), X.cols());
+        acceleration.rowwise() += acceleration_ext.transpose();
+        auto Y = X + h * vel + h * h * acceleration;
+
+        // compute grad g
+        double err = 1;
+        int step_ = 1;
+        while (err > 1e-3 && step_ <= 15)
+        {
+            auto grad_g = flatten(mass_per_vertex * (X - Y) / (h * h) + computeGrad(stiffness));
+            for (size_t i = 0; i < n_vertices; i++) {
+                if (dirichlet_bc_mask[i]) {
+                    grad_g(3 * i, 0) = 0;
+                    grad_g(3 * i + 1, 0) = 0;
+                    grad_g(3 * i + 2, 0) = 0;
+                }
+            }
+            Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+            solver.compute(H_elastic);
+            auto delta_x = unflatten(solver.solve(grad_g));
+
+            X -= delta_x;
+            err = grad_g.norm();
+            step_++;
+        }
 
         // Solve Newton's search direction with linear solver 
         
+        //std::cout << delta_x;
+
         // update X and vel 
+        
+        acceleration -= computeGrad(stiffness) / mass_per_vertex;
+        if (enable_sphere_collision) {
+            acceleration += acceleration_collision;
+        }
+        vel += h * acceleration;
+        if (enable_damping)
+            vel *= damping;
 
         TOC(step)
     }
     else if (time_integrator == SEMI_IMPLICIT_EULER) {
 
         // Semi-implicit Euler
-        Eigen::MatrixXd acceleration = -computeGrad(stiffness);
+        Eigen::MatrixXd acceleration = -computeGrad(stiffness) / mass_per_vertex;
         acceleration.rowwise() += acceleration_ext.transpose();
 
         // -----------------------------------------------
@@ -73,8 +110,16 @@ void MassSpring::step()
         // -----------------------------------------------
 
         // (HW TODO): Implement semi-implicit Euler time integration
-
+        
         // Update X and vel 
+        vel += h * acceleration;
+        for (size_t i = 0; i < vel.rows(); i++) {
+            if (dirichlet_bc_mask[i])
+                vel.row(i).setZero();
+        }
+        if (enable_damping)
+            vel *= damping;
+        X += h * vel;
         
     }
     else {
@@ -108,10 +153,18 @@ Eigen::MatrixXd MassSpring::computeGrad(double stiffness)
     for (const auto& e : E) {
         // --------------------------------------------------
         // (HW TODO): Implement the gradient computation
-        
+        auto diff = X.row(e.first) - X.row(e.second);
+        auto l = E_rest_length[i];
+        auto grad_e = stiffness * (diff.norm() - l) * diff / diff.norm();
+        for (size_t i = 0; i < 3; i++)
+        {
+            g.coeffRef(e.first, i) += grad_e(i);
+            g.coeffRef(e.second, i) -= grad_e(i);
+        }
         // --------------------------------------------------
         i++;
     }
+    //std::cout << g.row(2) << std::endl;
     return g;
 }
 
@@ -128,7 +181,52 @@ Eigen::SparseMatrix<double> MassSpring::computeHessianSparse(double stiffness)
         // (HW TODO): Implement the sparse version Hessian computation
         // Remember to consider fixed points 
         // You can also consider positive definiteness here
-       
+        auto diff = X.row(e.first) - X.row(e.second);
+        auto l = E_rest_length[i];
+        Eigen::MatrixXd He = Eigen::MatrixXd::Zero(3, 3);
+        for (size_t i = 0; i < 3; i++)
+            for (size_t j = 0; j < 3; j++)
+                He(i, j) = diff(i) * diff(j);
+        He = He / (diff.norm() * diff.norm());
+
+        if (l > diff.norm())
+            He = stiffness * He;
+        else
+            He = stiffness * He + stiffness * (1 - l / diff.norm()) * (I - He);
+
+        if (dirichlet_bc_mask[e.first])
+        {
+            for (size_t i = 0; i < 3; i++)
+                H.coeffRef(3 * e.first + i, 3 * e.first + i) = 1;
+            for (size_t i = 0; i < 3; i++)
+                for (size_t j = 0; j < 3; j++)
+                    H.coeffRef(3 * e.second + i, 3 * e.second + j) += He(i, j);
+        }  
+        else if (dirichlet_bc_mask[e.second])
+        {
+            for (size_t i = 0; i < 3; i++)
+                H.coeffRef(3 * e.second + i, 3 * e.second + i) = 1;
+            for (size_t i = 0; i < 3; i++)
+                for (size_t j = 0; j < 3; j++)
+                    H.coeffRef(3 * e.first + i, 3 * e.first + j) += He(i, j);
+        } 
+        else
+        {
+            for (size_t i = 0; i < 3; i++)
+            {
+                for (size_t j = 0; j < 3; j++)
+                {
+                    H.coeffRef(3 * e.first + i, 3 * e.first + j) += He(i, j);
+                    H.coeffRef(3 * e.second + i, 3 * e.second + j) += He(i, j);
+                    H.coeffRef(3 * e.first + i, 3 * e.second + j) = -He(i, j);
+                    H.coeffRef(3 * e.second + i, 3 * e.first + j) = -He(i, j);
+                }
+            }
+        }
+        for (size_t i = 0; i < 3 * n_vertices; i++)
+        {
+            H.coeffRef(i, i) += mass / n_vertices / h / h;
+        }
         // --------------------------------------------------
 
         i++;
@@ -162,6 +260,11 @@ Eigen::MatrixXd MassSpring::getSphereCollisionForce(Eigen::Vector3d center, doub
     Eigen::MatrixXd force = Eigen::MatrixXd::Zero(X.rows(), X.cols());
     for (int i = 0; i < X.rows(); i++) {
        // (HW Optional) Implement penalty-based force here 
+        auto dir = Vector3d(X.row(i)) - center;
+        auto tmp = collision_scale_factor * radius / dir.norm() - 1;
+        if (tmp < 0)
+            tmp = 0;
+        force.row(i) = collision_penalty_k * tmp * dir;
     }
     return force;
 }

@@ -13,7 +13,6 @@
 #include "resource_allocator_instance.hpp"
 #include "rich_type_buffer.hpp"
 #include "utils/draw_fullscreen.h"
-#include "pxr/base/gf/frustum.h"
 
 namespace USTC_CG::node_deferred_lighting {
 
@@ -136,18 +135,7 @@ static void node_exec(ExeParams params)
 
             auto radius = lights[i]->Get(HdLightTokens->radius).Get<float>();
             
-            GfMatrix4f light_view_mat;
-            GfMatrix4f light_projection_mat;
-            if (lights[i]->GetLightType() == HdPrimTypeTokens->sphereLight) {
-                GfFrustum frustum;
-                light_view_mat =
-                    GfMatrix4f().SetLookAt(position3, GfVec3f(0, 0, 0), GfVec3f(0, 0, 1));
-                frustum.SetPerspective(120.f, 1.0, 1, 25.f);
-                light_projection_mat = GfMatrix4f(frustum.ComputeProjectionMatrix());
-            }
-
-            light_vector.emplace_back(
-                light_projection_mat, light_view_mat, position3, 0.f, diffuse3, i);
+            light_vector.emplace_back(GfMatrix4f(), GfMatrix4f(), position3, 0.f, diffuse3, i);
 
             // You can add directional light here, and also the corresponding shadow map calculation
             // part.

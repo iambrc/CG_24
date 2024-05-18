@@ -3,8 +3,6 @@
 #include <random>
 
 #include "surfaceInteraction.h"
-#include "Utils/sampling.hpp"
-#include "Utils/math.hpp"
 USTC_CG_NAMESPACE_OPEN_SCOPE
 using namespace pxr;
 
@@ -51,21 +49,10 @@ GfVec3f PathIntegrator::EstimateOutGoingRadiance(
     GfVec3f directLight = EstimateDirectLight(si, uniform_float);
 
     // HW7_TODO: Estimate global lighting here.
-    GfVec3f globalLight = {0.f, 0.f, 0.f};
-    float ksi = uniform_float(), PR = 0.5f;
-    if (ksi < PR)
-    {
-        float pdf;
-        GfVec3f Dir;
-        auto brdf = si.Sample(Dir, pdf, uniform_float);
-        GfRay new_ray(si.position + 0.0001f*si.geometricNormal, Dir);
-        globalLight = GfCompMult(
-                EstimateOutGoingRadiance(new_ray, uniform_float, recursion_depth + 1), brdf) *
-                abs(GfDot(si.shadingNormal, Dir.GetNormalized()))/pdf/PR;
-    }
+    GfVec3f globalLight = GfVec3f{0.f};
 
     color = directLight + globalLight;
-    
+
     return color;
 }
 

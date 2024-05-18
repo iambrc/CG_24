@@ -18,7 +18,7 @@ namespace USTC_CG::node_mass_spring {
 
 // -------------------- helper functions (No need to modify) --------------------
 
-using EdgeSet = std::unordered_set<Edge, hashEdge>;
+//using EdgeSet = std::unordered_set<Edge, hashEdge>;
 
 Eigen::MatrixXi usd_faces_to_eigen(
     const pxr::VtArray<int>& faceVertexCount,
@@ -109,6 +109,9 @@ static void node_mass_spring_declare(NodeDeclarationBuilder& b)
     // Current time in node system 
     b.add_input<decl::Float>("time_code");
 
+    // max iter
+    b.add_input<decl::Int>("maximum iterations in Liu13").default_val(100).min(1).max(500);
+
     // Output 
     b.add_output<decl::MassSpringSocket>("Mass Spring Class");
     b.add_output<decl::Geometry>("Output Mesh");
@@ -123,7 +126,9 @@ static void node_mass_spring_exec(ExeParams params)
 
     auto geometry = params.get_input<GOperandBase>("Mesh");
     auto mesh = geometry.get_component<MeshComponent>();
-
+    if (mesh->faceVertexCounts.size() == 0) {
+        throw std::runtime_error("Read USD error.");
+    }
     if (time_code == 0) {  // If time = 0, reset and initialize the mass spring class
         if (mesh) {
             if (mass_spring != nullptr)
@@ -132,17 +137,20 @@ static void node_mass_spring_exec(ExeParams params)
             auto edges =
                 get_edges(usd_faces_to_eigen(mesh->faceVertexCounts, mesh->faceVertexIndices));
             auto vertices = usd_vertices_to_eigen(mesh->vertices);
+            const float k = params.get_input<float>("stiffness");
 
             bool enable_liu13 =  params.get_input<int>("enable Liu13") == 1 ? true : false;
             if (enable_liu13) { 
                 // HW Optional 
-				mass_spring = std::make_shared<FastMassSpring>(vertices, edges);
+                unsigned max_it = params.get_input<int>("maximum iterations in Liu13");
+                double h_ = params.get_input<float>("h");
+				mass_spring = std::make_shared<FastMassSpring>(vertices, edges, k, max_it, h_);
 			}
 			else
 				mass_spring = std::make_shared<MassSpring>(vertices, edges);
 
             // simulation parameters
-            mass_spring->stiffness = params.get_input<float>("stiffness");
+            mass_spring->stiffness = k;
             mass_spring->h = params.get_input<float>("h");
             mass_spring->gravity = { 0, 0, params.get_input<float>("gravity")};
             mass_spring->damping = params.get_input<float>("damping");
